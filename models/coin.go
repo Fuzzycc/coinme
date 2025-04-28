@@ -1,5 +1,7 @@
 package models
 
+import "fmt"
+
 type (
 	// Abstraction for the underlying coin Id type
 	CoinID uint16
@@ -14,6 +16,23 @@ type Coin struct {
 	Id    CoinID
 	Value CoinValue
 	Name  CoinName
+}
+
+// A short hand for id;name;value
+func (c *Coin) String() string {
+	return fmt.Sprintf("%d;%s;%d", c.Id, c.Name, c.Value)
+}
+
+func (cid *CoinID) String() string {
+	return fmt.Sprintf("%d", cid)
+}
+
+func (cn *CoinName) String() string {
+	return string(*cn)
+}
+
+func (cv *CoinValue) String() string {
+	return fmt.Sprintf("%d", cv)
 }
 
 // Underlying Data structure
