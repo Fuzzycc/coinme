@@ -1,34 +1,52 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func main() {
 	fmt.Println("Coinme, right now!")
 }
 
-// A coin has a positive integer Value and a Name.
-type coin struct {
-	Id    uint16
-	Value uint32
-	Name  string
-}
+type (
+	// Abstraction for the underlying coin Id type
+	CoinID uint16
+	// Abstraction for the underlying coin Value type
+	CoinValue uint32
+	// Abstraction for the underlying coin Name type
+	CoinName string
+	// Abstraction for the underlying chain Id type
+	ChainID uint16
+	// Abstraction for the underlying chain Name type
+	ChainName string
+)
 
+// A coin has a Value and a Name.
+type coin struct {
+	Id    CoinID
+	Value CoinValue
+	Name  CoinName
+}
 // Underlying Data structure
 // Coin ID, Value, Name
 
 // A chain is a named collection of coins by their Id value.
 type chain struct {
-	Id    uint16
-	Name  string
-	Coins []uint16
+	Id    ChainID
+	Name  ChainName
+	Coins []CoinID
 }
 
 type coinTable []coin
 
 type chainTable []chain
 
+// Init methods---------------------------
+func NewCoin(s CoinName, v CoinValue) (coin)
+func NewChain(s ChainName,coins ...any) (chain)
+
+
 // Chain methods---------------------------
-func (c chain) New(string, ...any) // figure out the ID by yourself
 
 func (c chain) Add(...any) error // for each coin, if switch type coin then add coin.id, if uint then add the id
 
