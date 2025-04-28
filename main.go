@@ -79,3 +79,4 @@ func (ct chainTable) Last() uint16
 func (ct chainTable) First() uint16
 
 func (ct chainTable) Exist(any) bool
+
