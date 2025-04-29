@@ -1,4 +1,4 @@
-0;version;id;name;value
+version;id;name;value
 1;1001;Beeronimics Bronze Toss;1
 1;1002;Beeronimics Bronze Wey;10
 1;1003;Beeronimics Silverling;100
