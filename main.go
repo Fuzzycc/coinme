@@ -1,165 +1,554 @@
 package main
 
 import (
-	"fmt"
+	"context"
+	"log"
 	"os"
-	"text/tabwriter"
 
-	"github.com/Fuzzycc/coinme/ledger"
+	"github.com/urfave/cli/v3"
+
+	ut "coinme/internal/utils"
 )
 
-/*
-In utility, make a Coin Marshal to BaseLedger, which is a record []string in the V1 form
-Define the V1 form and abstract the code? Nah, just write it to work and refine it later.
-or should the marsha function be in the ledger?
-The ledger would become too big later on if I have multipel forms, each with their own marshal unmarshal
+const (
+	version string = "0.1.5"
+)
 
-so, to write a coin... r.Write(utils.MarshalV1SCSV(coin)) V1 denonates the rules on the field.
-So there can be V1SCSV for the base, V1JSON, V1XML, V1SQl, etc.
+type funcs struct{}
 
-For base.
-New coins are appended only, sorting is separate
-So, Cleaning needs to just discard any occurence beyond the first
-Because, manually editing the file is the only way to get ID duplication
-Because the CLI does not allow ID insertion
-*/
-
-func main() {
-	// still in development, this is verification code
-	fmt.Println("Coinme, right now!")
-
-	// Open sample file
-	file, err := os.OpenInRoot("./data/", "coin.sample.txt")
-	if err != nil {
-		panic(err)
-	}
-	// defer file.Close()
-
-	// create BaseReader, an enconding/csv Reader wrapper
-	r := ledger.NewBaseReader(file)
-	// l.Comma = ';'
-	// l.Comment = '0'
-
-	// Read all entries. Read also exist
-	records, err := r.ReadAll()
-	if err != nil {
-		panic(err)
-	}
-
-	// close the file
-	file.Close()
-
-	// open the file for writing
-	root, _ := os.OpenRoot("./data/")
-	f, err := root.OpenFile("coin.sample.scsv", os.O_RDWR|os.O_APPEND|os.O_CREATE, 0o644)
-	if err != nil {
-		panic(err)
-	}
-	defer f.Close()
-
-	// create tmp file as a data store
-	// f, err := os.CreateTemp("", "coinme-tmpfile-*.txt")
-	// defer f.Close()
-	// defer os.Remove(f.Name())
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// defer f.Close()
-
-	// write to the file
-	w := ledger.NewBaseWriter(f)
-	w.SetComma(';')
-	w.WriteAll(records)
-
-	f.Seek(0, 0)
-	r = ledger.NewBaseReader(f)
-
-	// Read from the file
-	records, err = r.ReadAll()
-	if err != nil {
-		panic(err)
-	}
-
-	// display results
-	display := func() {
-		w := tabwriter.NewWriter(os.Stdout, 1, 1, 4, ' ', 0)
-		defer w.Flush() //<<< printing is here
-		for _, record := range records {
-			fmt.Fprintf(w, "%+v\t\"%+v\"\t%+v\n", record[1], record[2], record[3])
-		}
-		fmt.Println(f.Name())
-	}
-	display()
+func (f *funcs) defaultUsage() {
+	ut.Print("Coinme\t\t\t(v" + version + ")\n- CRUD coins and coinage chains!")
 }
 
-// type (
-// 	// Abstraction for the underlying coin Id type
-// 	CoinID uint16
-// 	// Abstraction for the underlying coin Value type
-// 	CoinValue uint32
-// 	// Abstraction for the underlying coin Name type
-// 	CoinName string
-// 	// Abstraction for the underlying chain Id type
-// 	ChainID uint16
-// 	// Abstraction for the underlying chain Name type
-// 	ChainName string
-// )
+func (f *funcs) listCoin(by string, term any) {
+	ut.ListCoin(by, term)
+}
 
-// // A coin has a Value and a Name.
-// type coin struct {
-// 	Id    CoinID
-// 	Value CoinValue
-// 	Name  CoinName
-// }
+func (f *funcs) listChain(by string, term any) {
+	ut.ListChain(by, term)
+}
 
-// // Underlying Data structure
-// // Coin ID, Value, Name
+func (f *funcs) addCoin(name string, value int, desc string) {
+	ut.AddCoinHandler(name, value, desc)
+}
 
-// // A chain is a named collection of coins by their Id value.
-// type chain struct {
-// 	Id    ChainID
-// 	Name  ChainName
-// 	Coins []CoinID
-// }
+func (f *funcs) addChain(name string, desc string) {
+	ut.AddChainHandler(name, desc)
+}
 
-// type coinTable []coin
+func (f *funcs) removeCoin(by string, term any) {
+	ut.RemoveCoin(by, term)
+}
 
-// type chainTable []chain
+func (f *funcs) removeChain(by string, term any) {
+	ut.RemoveChain(by, term)
+}
 
-// // Init methods---------------------------
-// func NewCoin(s CoinName, v CoinValue) coin
-// func NewChain(s ChainName, coins ...any) chain
+func (f *funcs) editCoin(id, value int, name, desc string) {
+	ut.EditCoin(id, value, name, desc)
+}
 
-// // Chain methods---------------------------
+func (f *funcs) editChain(id int, name string, desc string) {
+	ut.EditChain(id, name, desc)
+}
 
-// func (c chain) Add(...any) error // for each coin, if switch type coin then add coin.id, if uint then add the id
+func (f *funcs) editChainCoins(id int, coins []int) {
+	ut.EditChainCoins(id, coins)
+}
 
-// func (c chain) Remove(any) error
+func (f *funcs) editChainRelatives(id int, chains []int) {
+	ut.PrintOut("Run: edit chain relatives")
+}
 
-// func (c chain) Modify(any, uint32, string) error
+func main() {
+	var (
+		addCoinName  string
+		addCoinValue int
+		addCoinDesc  string
 
-// // No read methods, fields are exported and public
+		addChainName string
+		addChainDesc string
 
-// func (c chain) Convert(any, any) (int, error) // accepts coin, coin.id, or Coins[] index
+		// listCoinField string
+		// listCoinBy   string
 
-// func (c chain) String() string
+		listCoinNum  []int
+		listCoinTerm []string
 
-// // Coin methods----------------------------
+		listChainNum  []int
+		listChainTerm []string
 
-// func (c coin) New(string, uint32)
+		removeCoinNum  []int
+		removeChainNum []int
 
-// func (c coin) Modify(string, uint32)
+		editCoinId    int
+		editCoinName  string
+		editCoinValue int
+		editCoinDesc  string
 
-// // coinTable methods-------------------------
-// func (ct coinTable) Last() uint16
+		editChainId        int
+		editChainName      string
+		editChainDesc      string
+		editChainCoins     []int
+		editChainRelatives []int
+	)
+	f := new(funcs)
 
-// func (ct coinTable) First() uint16
+	listCommands := []*cli.Command{
+		{
+			Name:    "coin",
+			Aliases: []string{"c"},
+			Usage:   "List coin",
+			Commands: []*cli.Command{
+				{
+					Name:     "id",
+					Aliases:  []string{"i"},
+					Usage:    "List coins by matching id(s)",
+					Category: "coin",
+					Arguments: []cli.Argument{
+						&cli.IntArgs{
+							Name:        "integer",
+							Min:         0,
+							Max:         -1,
+							Value:       0,
+							Destination: &listCoinNum,
+						},
+					},
+					Action: func(ctx context.Context, cmd *cli.Command) error {
+						f.listCoin("id", listCoinNum)
+						return nil
+					},
+				},
+				{
+					Name:     "value",
+					Aliases:  []string{"v"},
+					Usage:    "List coins by matching value(s)",
+					Category: "coin",
+					Arguments: []cli.Argument{
+						&cli.IntArgs{
+							Name:        "integer",
+							Min:         0,
+							Max:         -1,
+							Value:       0,
+							Destination: &listCoinNum,
+						},
+					},
+					Action: func(ctx context.Context, cmd *cli.Command) error {
+						f.listCoin("value", listCoinNum)
+						return nil
+					},
+				},
+				{
+					Name:     "name",
+					Aliases:  []string{"n"},
+					Usage:    "List coins by matching name(s)",
+					Category: "coin",
+					Arguments: []cli.Argument{
+						&cli.StringArgs{
+							Name:        "term",
+							Min:         0,
+							Max:         -1,
+							Value:       "",
+							Destination: &listCoinTerm,
+							Config:      cli.StringConfig{TrimSpace: true},
+						},
+					},
+					Action: func(ctx context.Context, cmd *cli.Command) error {
+						f.listCoin("name", listCoinTerm)
+						return nil
+					},
+				},
+				{
+					Name:     "desc",
+					Aliases:  []string{"d"},
+					Usage:    "List coins by matching description(s)",
+					Category: "coin",
+					Arguments: []cli.Argument{
+						&cli.StringArgs{
+							Name:        "term",
+							Min:         0,
+							Max:         -1,
+							Value:       "",
+							Destination: &listCoinTerm,
+							Config:      cli.StringConfig{TrimSpace: true},
+						},
+					},
+					Action: func(ctx context.Context, cmd *cli.Command) error {
+						f.listCoin("desc", listCoinTerm)
+						return nil
+					},
+				},
+			},
+			Category: "list",
+			Action: func(ctx context.Context, cmd *cli.Command) error {
+				f.listCoin("", "")
+				return nil
+			},
+		},
+		{
+			Name:    "chain",
+			Aliases: []string{"s"},
+			Usage:   "List chain",
+			Commands: []*cli.Command{
+				{
+					Name:     "id",
+					Aliases:  []string{"i"},
+					Usage:    "List chain by matching id(s)",
+					Category: "chain",
+					Arguments: []cli.Argument{
+						&cli.IntArgs{
+							Name:        "integer",
+							Min:         0,
+							Max:         -1,
+							Value:       0,
+							Destination: &listChainNum,
+						},
+					},
+					Action: func(ctx context.Context, cmd *cli.Command) error {
+						f.listChain("id", listChainNum)
+						return nil
+					},
+				},
+				{
+					Name:     "coinID",
+					Aliases:  []string{"c"},
+					Usage:    "List chain by matching coin id(s)",
+					Category: "chain",
+					Arguments: []cli.Argument{
+						&cli.IntArgs{
+							Name:        "integer",
+							Min:         0,
+							Max:         -1,
+							Value:       0,
+							Destination: &listChainNum,
+						},
+					},
+					Action: func(ctx context.Context, cmd *cli.Command) error {
+						f.listChain("cid", listChainNum)
+						return nil
+					},
+				},
+				{
+					Name:     "relativeID",
+					Aliases:  []string{"r"},
+					Usage:    "List chain by matching relative chain id(s)",
+					Category: "chain",
+					Arguments: []cli.Argument{
+						&cli.IntArgs{
+							Name:        "integer",
+							Min:         0,
+							Max:         -1,
+							Value:       0,
+							Destination: &listChainNum,
+						},
+					},
+					Action: func(ctx context.Context, c *cli.Command) error {
+						f.listChain("rid", listChainNum)
+						return nil
+					},
+				},
+				{
+					Name:     "name",
+					Aliases:  []string{"n"},
+					Usage:    "List chain by matching name(s)",
+					Category: "chain",
+					Arguments: []cli.Argument{
+						&cli.StringArgs{
+							Name:        "term",
+							Min:         0,
+							Max:         -1,
+							Value:       "",
+							Destination: &listChainTerm,
+							Config:      cli.StringConfig{TrimSpace: true},
+						},
+					},
+					Action: func(ctx context.Context, cmd *cli.Command) error {
+						f.listChain("name", listChainTerm)
+						return nil
+					},
+				},
+				{
+					Name:     "desc",
+					Aliases:  []string{"d"},
+					Usage:    "List chain by matching description(s)",
+					Category: "chain",
+					Arguments: []cli.Argument{
+						&cli.StringArgs{
+							Name:        "term",
+							Min:         0,
+							Max:         -1,
+							Value:       "",
+							Destination: &listChainTerm,
+							Config:      cli.StringConfig{TrimSpace: true},
+						},
+					},
+					Action: func(ctx context.Context, cmd *cli.Command) error {
+						f.listChain("desc", listChainTerm)
+						return nil
+					},
+				},
+			},
+			Category: "list",
+			Action: func(ctx context.Context, cmd *cli.Command) error {
+				f.listChain("", "")
+				return nil
+			},
+		},
+	}
 
-// func (ct coinTable) Exist(any) bool
+	addCommands := []*cli.Command{
+		{
+			Name:    "coin",
+			Aliases: []string{"c"},
+			Usage:   "Add a new coin",
+			Arguments: []cli.Argument{
+				&cli.StringArg{
+					Name:        "name ",
+					Destination: &addCoinName,
+				},
+				&cli.IntArg{
+					Name:        "value ",
+					Destination: &addCoinValue,
+				},
+				&cli.StringArg{
+					Name:        "desc",
+					Destination: &addCoinDesc,
+				},
+			},
+			Action: func(ctx context.Context, cmd *cli.Command) error {
+				f.addCoin(addCoinName, addCoinValue, addCoinDesc)
+				return nil
+			},
+		},
+		{
+			Name:    "chain",
+			Aliases: []string{"s"},
+			Usage:   "Add a new coinage chain",
+			Arguments: []cli.Argument{
+				&cli.StringArg{
+					Name:        "name ",
+					Destination: &addChainName,
+				},
+				&cli.StringArg{
+					Name:        "desc",
+					Destination: &addChainDesc,
+				},
+			},
+			Action: func(ctx context.Context, cmd *cli.Command) error {
+				f.addChain(addChainName, addChainDesc)
+				return nil
+			},
+		},
+	}
 
-// // coinChain methods-------------------------
-// func (ct chainTable) Last() uint16
+	removeCommands := []*cli.Command{
+		{
+			Name:      "coin",
+			Aliases:   []string{"c"},
+			Usage:     "Remove coin by matching id(s)",
+			UsageText: "Coinme remove coin [integer ...]",
+			Arguments: []cli.Argument{
+				&cli.IntArgs{
+					Name:        "integer",
+					Min:         0,
+					Max:         -1,
+					Destination: &removeCoinNum,
+				},
+			},
+			Action: func(ctx context.Context, cmd *cli.Command) error {
+				f.removeCoin("id", removeCoinNum)
+				return nil
+			},
+		},
+		{
+			Name:      "chain",
+			Aliases:   []string{"s"},
+			Usage:     "Remove chain by matching id(s)",
+			UsageText: "Coinme remove coin [integer ...]",
+			Arguments: []cli.Argument{
+				&cli.IntArgs{
+					Name:        "Integer",
+					Min:         0,
+					Max:         -1,
+					Destination: &removeChainNum,
+				},
+			},
+			Action: func(ctx context.Context, cmd *cli.Command) error {
+				f.removeChain("id", removeChainNum)
+				return nil
+			},
+		},
+	}
 
-// func (ct chainTable) First() uint16
+	editCommands := []*cli.Command{
+		{
+			Name:      "coin",
+			Aliases:   []string{"c"},
+			Usage:     "Edit coin by matching id",
+			UsageText: "Coinme edit coin {id} [name] [value] [desc]",
+			Arguments: []cli.Argument{
+				&cli.IntArg{
+					Name:        "id",
+					Value:       0,
+					Destination: &editCoinId,
+				},
+				&cli.IntArg{
+					Name:        "value",
+					Value:       0,
+					Destination: &editCoinValue,
+				},
+				&cli.StringArg{
+					Name:        "name",
+					Value:       "x",
+					Destination: &editCoinName,
+					Config:      cli.StringConfig{TrimSpace: true},
+				},
+				&cli.StringArg{
+					Name:        "desc",
+					Value:       "x",
+					Destination: &editCoinDesc,
+					Config:      cli.StringConfig{TrimSpace: true},
+				},
+			},
+			Action: func(ctx context.Context, c *cli.Command) error {
+				f.editCoin(editCoinId, editCoinValue, editCoinName, editCoinDesc)
+				return nil
+			},
+		},
+		{
+			Name:      "chain",
+			Aliases:   []string{"s"},
+			Usage:     "Edit chain by matching id",
+			UsageText: "Coinme edit chain {id} [name] [desc]\nCoinme edit chain coins [coinId...]\nCoinme edit chain relatives [chainId...]",
+			Arguments: []cli.Argument{
+				&cli.IntArg{
+					Name:        "id",
+					Value:       0,
+					Destination: &editChainId,
+				},
+				&cli.StringArg{
+					Name:        "name",
+					Value:       "x",
+					Destination: &editChainName,
+				},
+				&cli.StringArg{
+					Name:        "desc",
+					Value:       "x",
+					Destination: &editChainDesc,
+				},
+			},
+			Action: func(ctx context.Context, c *cli.Command) error {
+				f.editChain(editChainId, editChainName, editChainDesc)
+				return nil
+			},
+			Commands: []*cli.Command{
+				{
+					Name:      "coins",
+					Aliases:   []string{"c"},
+					Usage:     "Edit chain coins by ids (Overwrites)",
+					UsageText: "Coinme edit chain coins id [coinId...]",
+					Arguments: []cli.Argument{
+						&cli.IntArg{
+							Name:        "id",
+							Value:       0,
+							Destination: &editChainId,
+						},
+						&cli.IntArgs{
+							Name:        "coinId",
+							Min:         0,
+							Max:         -1,
+							Destination: &editChainCoins,
+						},
+					},
+					Action: func(ctx context.Context, c *cli.Command) error {
+						f.editChainCoins(editChainId, editChainCoins)
+						return nil
+					},
+				},
+				{
+					Name:      "relatives",
+					Aliases:   []string{"r"},
+					Usage:     "Edit chain relative chains by ids (Overwrites)",
+					UsageText: "Coinme edit chain relatives [chainId...]",
+					Arguments: []cli.Argument{
+						&cli.IntArg{
+							Name:        "id",
+							Value:       0,
+							Destination: &editChainId,
+						},
+						&cli.IntArgs{
+							Name:        "chainId",
+							Min:         0,
+							Max:         -1,
+							Destination: &editChainRelatives,
+						},
+					},
+					Action: func(ctx context.Context, c *cli.Command) error {
+						// TODO
+						f.editChainRelatives(editChainId, editChainRelatives)
+						return nil
+					},
+				},
+			},
+		},
+	}
 
-// func (ct chainTable) Exist(any) bool
+	commands := []*cli.Command{
+		{ // --- --- --- --- --- --- --- --- LIST
+			Name:     "list",
+			Aliases:  []string{"l"},
+			Usage:    "List coins (d) or chains",
+			Commands: listCommands,
+			Action: func(ctx context.Context, cmd *cli.Command) error {
+				f.listCoin("", "")
+				return nil
+			},
+		},
+		{ // --- --- --- --- --- --- --- --- ADD
+			Name:     "add",
+			Aliases:  []string{"a"},
+			Usage:    "Add a coin (d) or chain",
+			Commands: addCommands,
+			Action: func(ctx context.Context, cmd *cli.Command) error {
+				f.addCoin("", 0, "")
+				return nil
+			},
+		},
+		{ // --- --- --- --- --- --- --- --- REMOVE
+			Name:     "remove",
+			Aliases:  []string{"r"},
+			Usage:    "Remove a choin (d) or chain",
+			Commands: removeCommands,
+			Action: func(ctx context.Context, cmd *cli.Command) error {
+				f.removeCoin("", "")
+				return nil
+			},
+		},
+		{ // --- --- --- --- --- --- --- --- EDIT
+			Name:     "edit",
+			Aliases:  []string{"e"},
+			Usage:    "Edit choin (d) or chain",
+			Commands: editCommands,
+			Action: func(ctx context.Context, cmd *cli.Command) error {
+				f.editCoin(0, 0, "x", "x")
+				return nil
+			},
+		},
+	}
+
+	cmd := &cli.Command{
+		Name:     "Coinme",
+		Usage:    "CRUD coin exchange rates",
+		Commands: commands,
+		// Flags:    flags,
+		Action: func(context.Context, *cli.Command) error {
+			f.defaultUsage()
+			return nil
+		},
+		Version: version,
+	}
+
+	if err := cmd.Run(context.Background(), os.Args); err != nil {
+		log.Fatal(err)
+	}
+}

@@ -1,5 +1,21 @@
 # coinme
+A complete coinage management system intended for authors with straightforward applications and the power to math how much do the coins of that Elvish kingdom equate to those of that Dwarvish Council state you. Never fumble calculating by hand ever again!
+
+# Installation
+Currently still under development, but if you'd like to give it a spin...
++ Make you sure you have Go (v1.24)
++ Clone the repo and cd into it
++ run `go build` to get an executable
+
+# Uage
+run the command and simply add 'help' (without the quotes) to any operation you need to do to get its usage.
+
+Don't worry about messing up, everything is written to reduce distructive mistakes! No need to fear this magic.
+
+# OLD README - Deprecated
+# coinme
 A simple tool to help you math how much your "Fantasy Kingdom Number 943" gold coins are worth in "Neighbor Kingdom of Fantasy Kingdom Number 943" copper coins. 
+
 
 # The Problem
 Have you ever drafted a fictional fantasy setting for a story, a TRPG campaign, etc., and found it a hassle to track how much a certain number of a certain coin is worth in another coin?
