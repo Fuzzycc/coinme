@@ -1,5 +1,5 @@
 # coinme
-A complete coinage management system intended for authors with straightforward applications and the power to math how much do the coins of that Elvish kingdom equate to those of that Dwarvish Council state you. Never fumble calculating by hand ever again!
+A complete coinage management system intended for authors with straightforward applications and the power to math how much do the coins of that Elvish kingdom equate to those of that Dwarvish Council state. Never fumble calculating by hand ever again!
 
 # Installation
 Currently still under development, but if you'd like to give it a spin...
