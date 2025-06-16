@@ -1,13 +1,13 @@
 package utils
 
 import (
-	"coinme/internal/conf"
-	"coinme/internal/types"
 	"encoding/json"
 	"os"
+	"slices"
 	"strings"
 
-	"slices"
+	"coinme/internal/conf"
+	"coinme/internal/types"
 )
 
 // ADD
@@ -43,7 +43,7 @@ func AddChainJsonL(name string, desc string) {
 }
 
 func SaveCoinJsonLines(r *os.Root, filename string, c types.Coin) error {
-	f, err := r.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := r.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		return err
 	}
@@ -56,7 +56,7 @@ func SaveCoinJsonLines(r *os.Root, filename string, c types.Coin) error {
 }
 
 func SaveChainJsonLines(r *os.Root, filename string, c types.Chain) error {
-	f, err := r.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := r.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		return err
 	}
@@ -342,7 +342,7 @@ func CleanCoinByIdJsonL(ids []int) []types.Coin {
 	CrashErr(err, conf.ErrPrefixUtils+"-CleanCoinByIdJsonL/OpenRoot")
 	defer r.Close()
 
-	f, err := r.OpenFile(conf.DataCoinPathJsonL, os.O_RDWR, 0644)
+	f, err := r.OpenFile(conf.DataCoinPathJsonL, os.O_RDWR, 0o644)
 	CrashErr(err, conf.ErrPrefixUtils+"-CleanCoinByIdJsonL/OpenFile")
 	defer f.Close()
 
@@ -394,7 +394,7 @@ func CleanChainByIdJsonL(ids []int) []types.Chain {
 	CrashErr(err, conf.ErrPrefixUtils+"-CleanChainByIdJsonL/OpenRoot")
 	defer r.Close()
 
-	f, err := r.OpenFile(conf.DataChainPathJsonL, os.O_RDWR, 0644)
+	f, err := r.OpenFile(conf.DataChainPathJsonL, os.O_RDWR, 0o644)
 	CrashErr(err, conf.ErrPrefixUtils+"-CleanChainByIdJsonL/OpenFile")
 	defer f.Close()
 
@@ -477,7 +477,7 @@ func EditCoinJsonL(id int, name string, value int, desc string) types.Coin {
 	CrashErr(err, "-EditCoin/OpenRoot")
 	defer r.Close()
 
-	f, err := r.OpenFile(conf.DataCoinPathJsonL, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	f, err := r.OpenFile(conf.DataCoinPathJsonL, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
 	CrashErr(err, "-EditCoin/OpenFile")
 	defer f.Close()
 
@@ -527,7 +527,7 @@ func EditChainJsonL(id int, name, desc string) types.Chain {
 	CrashErr(err, "-EditChain/OpenRoot")
 	defer r.Close()
 
-	f, err := r.OpenFile(conf.DataChainPathJsonL, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	f, err := r.OpenFile(conf.DataChainPathJsonL, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
 	CrashErr(err, "-EditChain/OpenFile")
 	defer f.Close()
 
@@ -546,6 +546,7 @@ func EditChainCoinsJsonL(id int, coins []int) types.Chain {
 	chains := LoadChainJsonL()
 	var chain types.Chain
 	var target int
+	var cFound bool
 
 	// modify target coin, or return original coin, unmodified on error
 	for i, c := range chains {
@@ -564,8 +565,13 @@ func EditChainCoinsJsonL(id int, coins []int) types.Chain {
 			chain.Cdate = c.Cdate
 			chain.Relatives = c.Relatives
 			target = i
+			cFound = true
+			// effectively only Mdate changed
 			break
 		}
+	}
+	if !cFound { // if chain not found
+		return chain // return zeroth chain
 	}
 	chains[target] = chain
 
@@ -574,11 +580,94 @@ func EditChainCoinsJsonL(id int, coins []int) types.Chain {
 	CrashErr(err, "-EditChainCoins/OpenRoot")
 	defer r.Close()
 
-	f, err := r.OpenFile(conf.DataChainPathJsonL, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0644)
+	f, err := r.OpenFile(conf.DataChainPathJsonL, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
 	CrashErr(err, "-EditChainCoins/OpenFile")
 	defer f.Close()
 
 	e := json.NewEncoder(f)
+
+	for i := range chains {
+		e.Encode(chains[i])
+	}
+
+	// return modified coin
+	return chain
+}
+
+
+func EditChainRelativeJsonL(id int, cid int, f float64) types.Chain {
+	// 1) Read all chains
+	// 2) Read Chain & Relative
+	// 3) Check if Relative in Chain
+	// 3.1) If not in Chain -> Add it
+	// 3.2) If in chain -> Overwrite it
+	// 3.3) If factory 0 -> Remove it
+	// 3.4) Modify Mdate if changed
+	// 4) Write Chains to file
+	// 5) Return Chain
+
+	// 1) Read all chains
+	chains := LoadChainJsonL()
+
+	var chain types.Chain
+	// var relative types.Chain
+	var cIndex int
+	// var rIndex int
+	var cFound bool
+	var rFound bool
+
+	// 2) Read Chain & Relative
+	for i, c := range chains {
+		if c.Id == id {
+			chain = c
+			cIndex = i
+			cFound = true
+		}
+		if c.Id == cid {
+			// relative = c
+			// rIndex = i
+			rFound = true
+		}
+	}
+	if !cFound {	// if chain not found
+		return chain // return zeroth chain -> Meaning nothing happened
+	}
+	if !rFound {	// if relative not found
+		return chain // return chain -> Meaning nothing happened
+	}
+
+	// 3) Check if Relative in Chain
+	_, ok := chain.Relatives[cid]
+
+	// 3.1) if not in Chain
+	if !ok {
+		if f <= 0 {
+			return chain // but factor 0, return unmodified chain
+		}
+		chain.Relatives[cid] = f // add it
+	} else {
+		// 3.2) if in chain
+		if f <= 0 { // but inbound factor is 0, remove it
+			delete(chain.Relatives, cid)
+		} else { // else overwrite
+			chain.Relatives[cid] = f
+		}
+	}
+	chain.Mdate = types.NewMDate() // update MDate
+
+	// update chains
+	chains[cIndex] = chain
+
+	// write everything back
+	r, err := os.OpenRoot(conf.DataDirPath)
+	CrashErr(err, "-EditChainRelativeJsonL/OpenRoot")
+	defer r.Close()
+
+	file, err := r.OpenFile(conf.DataChainPathJsonL, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
+	CrashErr(err, "-EditChainRelativeJsonL/OpenFile")
+	defer file.Close()
+
+	e := json.NewEncoder(file)
 
 	for i := range chains {
 		e.Encode(chains[i])

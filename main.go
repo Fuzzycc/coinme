@@ -56,8 +56,8 @@ func (f *funcs) editChainCoins(id int, coins []int) {
 	ut.EditChainCoins(id, coins)
 }
 
-func (f *funcs) editChainRelatives(id int, chains []int) {
-	ut.PrintOut("Run: edit chain relatives")
+func (f *funcs) editChainRelative(id, chainId int, factor float64) {
+	ut.EditChainRelative(id, chainId, factor)
 }
 
 func main() {
@@ -90,7 +90,8 @@ func main() {
 		editChainName      string
 		editChainDesc      string
 		editChainCoins     []int
-		editChainRelatives []int
+		editChainRelativeId int
+		editChainRelativeFactor float64
 	)
 	f := new(funcs)
 
@@ -466,26 +467,29 @@ func main() {
 					},
 				},
 				{
-					Name:      "relatives",
+					Name:      "relative",
 					Aliases:   []string{"r"},
-					Usage:     "Edit chain relative chains by ids (Overwrites)",
-					UsageText: "Coinme edit chain relatives [chainId...]",
+					Usage:     "Edit chain's single relative chain by id.",
+					UsageText: "Coinme edit chain relative {chainId relativeChainId relativeChainFactor}\n - Set relativeChainFactor to 0 to remove relativeChain\n - Set to any positive float to edit or add",
 					Arguments: []cli.Argument{
 						&cli.IntArg{
 							Name:        "id",
 							Value:       0,
 							Destination: &editChainId,
 						},
-						&cli.IntArgs{
+						&cli.IntArg{
 							Name:        "chainId",
-							Min:         0,
-							Max:         -1,
-							Destination: &editChainRelatives,
+							Value: 0,
+							Destination: &editChainRelativeId,
+						},
+						&cli.Float64Arg{
+							Name: "factor",
+							Value: 0,
+							Destination: &editChainRelativeFactor,
 						},
 					},
 					Action: func(ctx context.Context, c *cli.Command) error {
-						// TODO
-						f.editChainRelatives(editChainId, editChainRelatives)
+						f.editChainRelative(editChainId, editChainRelativeId, editChainRelativeFactor)
 						return nil
 					},
 				},

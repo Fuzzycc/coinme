@@ -180,8 +180,17 @@ func EditChainCoins(id int, coins []int) {
 		chain := EditChainCoinsJsonL(id, coins)
 		PrintOut(chain)
 	default:
-		LogErr("coinme: edit chain coins: no coinId specified, running list on chain instead")
-		ListChain("id", id)
+		LogErr("coinme: edit chain coins: no coinId specified, aborting...")
+	}
+}
+
+func EditChainRelative(id, cid int, factor float64){
+	switch {
+	case id > 0 && cid > 0:
+		chain := EditChainRelativeJsonL(id, cid, factor)
+		PrintOut(chain)
+	default:
+		LogErr("coinme: edit chain relatives: no Id or RelativeId specified, aborting...")
 	}
 }
 

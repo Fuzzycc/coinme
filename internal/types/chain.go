@@ -43,6 +43,10 @@ func NewChain(id int, name string, desc string, coins []int) (*Chain, error) {
 	}
 }
 
+func NewMDate() time.Time {
+	return time.Now()
+}
+
 // func (c Chain) String() string { // ssimplified for debugging
 // 	return fmt.Sprintf("\n{Id:%v, Name:\"%v\", Coins:%v, Relatives:%v}\n", c.Id, c.Name, c.Coins, c.Relatives)
 // }
