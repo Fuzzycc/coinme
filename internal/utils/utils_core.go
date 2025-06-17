@@ -194,6 +194,20 @@ func EditChainRelative(id, cid int, factor float64){
 	}
 }
 
+func ConvertCoin(value, id1, id2 int) {
+	switch{
+	case id1 > 0 && id2 > 0:
+		if value < 0 {
+			value *= -1
+		}
+		result := ConvertCoinByIdJsonL(value, id1, id2, 4)
+		PrintOut(result)
+	default:
+		LogErr("coinme: convert coin: coin Id not found")
+		PrintOut(0)
+	}
+}
+
 // --- --- --- ---
 // Reader
 // --- --- --- ---

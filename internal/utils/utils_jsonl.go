@@ -594,7 +594,6 @@ func EditChainCoinsJsonL(id int, coins []int) types.Chain {
 	return chain
 }
 
-
 func EditChainRelativeJsonL(id int, cid int, f float64) types.Chain {
 	// 1) Read all chains
 	// 2) Read Chain & Relative
@@ -629,10 +628,10 @@ func EditChainRelativeJsonL(id int, cid int, f float64) types.Chain {
 			rFound = true
 		}
 	}
-	if !cFound {	// if chain not found
+	if !cFound { // if chain not found
 		return chain // return zeroth chain -> Meaning nothing happened
 	}
-	if !rFound {	// if relative not found
+	if !rFound { // if relative not found
 		return chain // return chain -> Meaning nothing happened
 	}
 
@@ -675,4 +674,42 @@ func EditChainRelativeJsonL(id int, cid int, f float64) types.Chain {
 
 	// return modified coin
 	return chain
+}
+
+func ConvertCoinByIdJsonL(amount, id1, id2, precision int) float64 {
+	// 1) read all coins
+	// 2) get 2 coins
+	// 3) retrieve usable data
+	// 4) convert
+	// 5) return result
+	var coins []types.Coin
+	var c1, c2 types.Coin
+	var found1, found2 bool
+	var result float64
+
+	coins = LoadCoinJsonL()
+
+	for _, c := range coins {
+		if c.Id == id1 {
+			c1 = c
+			found1 = true
+		}
+		if c.Id == id2 {
+			c2 = c
+			found2 = true
+		}
+	}
+	if !found1 || !found2 {
+		return -0
+	}
+
+	result = float64((amount * c1.Value)) / float64((1 * c2.Value))
+	// pow := 1
+	// for i:= 0; i < precision; i++ {
+	// 	pow *= 10
+	// }
+	// mult := float64(pow)
+	// result = float64(int(result * mult)) / mult
+
+	return result
 }

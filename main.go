@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	version string = "0.1.5"
+	version string = "0.4.5"
 )
 
 type funcs struct{}
@@ -60,6 +60,10 @@ func (f *funcs) editChainRelative(id, chainId int, factor float64) {
 	ut.EditChainRelative(id, chainId, factor)
 }
 
+func (f *funcs) convertCoin(thisMuch, this, toThat int) {
+	ut.ConvertCoin(thisMuch, this, toThat)
+}
+
 func main() {
 	var (
 		addCoinName  string
@@ -92,6 +96,11 @@ func main() {
 		editChainCoins     []int
 		editChainRelativeId int
 		editChainRelativeFactor float64
+
+		convertCoin1 int
+		convertCoin1Value int
+		convertCoin2 int
+		// convertCoin2Value int
 	)
 	f := new(funcs)
 
@@ -497,6 +506,8 @@ func main() {
 		},
 	}
 
+	// convertCommands
+
 	commands := []*cli.Command{
 		{ // --- --- --- --- --- --- --- --- LIST
 			Name:     "list",
@@ -535,6 +546,33 @@ func main() {
 			Commands: editCommands,
 			Action: func(ctx context.Context, cmd *cli.Command) error {
 				f.editCoin(0, 0, "x", "x")
+				return nil
+			},
+		},
+		{
+			Name: "convert",
+			Aliases: []string{"c"},
+			Usage: "Convert one coin to another",
+			Arguments: []cli.Argument{
+				&cli.IntArg{
+					Name: "thisMuch ",
+					Value: 0,
+					Destination: &convertCoin1Value,
+				},
+				&cli.IntArg{
+					Name: "coin ",
+					Value: 0,
+					Destination: &convertCoin1,
+				},
+				&cli.IntArg{
+					Name: "toCoin",
+					Value: 0,
+					Destination: &convertCoin2,
+				},
+			},
+			UsageText: "Coinme convert {thisMuch coin toCoin}",
+			Action: func(ctx context.Context, c *cli.Command) error {
+				f.convertCoin(convertCoin1Value, convertCoin1, convertCoin2)
 				return nil
 			},
 		},
